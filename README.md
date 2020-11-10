@@ -8,5 +8,5 @@ echo "dm specal_domain_name" > /proc/router_domain/dm_ip
 echo "ip 192.168.0.1" > /proc/router_domain/dm_ip
 
 ## it works
-![1](./dns_hook/proc.png)
-![1](./dns_hook/dns.png)
+![1](./dns_hook/proc.jpg)
+![1](./dns_hook/dns.jpg)
