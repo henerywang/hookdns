@@ -4,4 +4,4 @@
 
 obj-m += dns_hook.o
 
-dns_hook-y :=  domain_hijack.o domain_map.o forgeDNS.o
+dns_hook-y :=  domain_hijack.o domain_map.o

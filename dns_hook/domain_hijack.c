@@ -25,11 +25,11 @@ extern uint8_t localdm[64];
 //UDP pseudo head, used for calibration
 typedef struct
 {
-	unsigned long saddr;
-	unsigned long daddr;
-	char mbz;//mbz must be zero
-	char protocal;
-	unsigned short tcpl;//UDP(head+len)
+  unsigned long saddr;
+  unsigned long daddr;
+  char mbz;//mbz must be zero
+  char protocal;
+  unsigned short tcpl;//UDP(head+len)
 }Fake_UDPheader;
 
 typedef struct {
@@ -48,35 +48,45 @@ description: domain prase
 ***********************************/
 int domain_prase(uint8_t *pos)
 {
-	int8_t d_buf[32];
-	int8_t i = 0;
+  int8_t d_buf[64];
+  int8_t i = 0;
 
-	memset(d_buf, 0, sizeof(d_buf));
-	for(i = 0; pos[i]; i++)
-	{
-		if(pos[i] < 20)
-			d_buf[i] = '.';
-		else
-			d_buf[i] = pos[i];
-		if(i>=31)
-			return -1;
-	}
+  memset(d_buf, 0, sizeof(d_buf));
+  for(i = 0; pos[i]; i++)
+  {
+    if(pos[i] < 20)
+      d_buf[i] = '.';
+    else
+      d_buf[i] = pos[i];
+    if(i>=63)
+      return -1;
+  }
 
-    printk("d_buf = %s\n",d_buf);
-	if(strncmp(d_buf, localdm, strlen(localdm)) == 0)
-	{
-		printk("domain: %s	len: %d\n", d_buf, strlen(d_buf));
-		return 1;
-	}
+    //printk("d_buf = %s\n",d_buf);
+    extern uint8_t alldns;
+    if(alldns == 1)
+    {
+        //skip s20 checking
+        if(strncmp(d_buf, "connectivity.samsung.com.cn", strlen("connectivity.samsung.com.cn")) == 0)
+        {
+            return -1;
+        }
+        return 1;
+    }
+  if(strncmp(d_buf, localdm, strlen(localdm)) == 0)
+  {
+    printk("domain: %s  len: %d\n", d_buf, strlen(d_buf));
+    return 1;
+  }
 
-	return -1;
+  return -1;
 }
 
 #define NIPQUAD(addr) \
-	((unsigned char *)&addr)[0], \
-	((unsigned char *)&addr)[1], \
-	((unsigned char *)&addr)[2], \
-	((unsigned char *)&addr)[3]
+  ((unsigned char *)&addr)[0], \
+  ((unsigned char *)&addr)[1], \
+  ((unsigned char *)&addr)[2], \
+  ((unsigned char *)&addr)[3]
 
 static int send_dns(struct net_device* dev, uint8_t dest_addr[ETH_ALEN], uint16_t proto,__be32 source,__be32 dest,__be16 sport ,__be16 dport,Name_info *save_name)
 {
@@ -153,47 +163,47 @@ static int send_dns(struct net_device* dev, uint8_t dest_addr[ETH_ALEN], uint16_
 description:
 ***********************************/
 unsigned int domain_hook(const struct nf_hook_ops *ops,
-			       struct sk_buff *skb,
-			       const struct nf_hook_state *state)
+             struct sk_buff *skb,
+             const struct nf_hook_state *state)
 {
-	struct iphdr *ip;
-	struct udphdr *udp;
-	uint8_t *p;
+  struct iphdr *ip;
+  struct udphdr *udp;
+  uint8_t *p;
     struct net_device *br0;
     br0 = dev_get_by_name(&init_net,"br0");
     Name_info save_name;
     struct ethhdr *eth = eth_hdr(skb);
     uint16_t *p_data = NULL;
 
-	if (!skb)
+  if (!skb)
         return NF_ACCEPT;
 
     if(!eth)
         return NF_ACCEPT;
 
 
-	if(skb->protocol != htons(0x0800)) //get ip data
-		return NF_ACCEPT;
+  if(skb->protocol != htons(0x0800)) //get ip data
+    return NF_ACCEPT;
 
-	ip = ip_hdr(skb);
-	if(ip->protocol != 17) //get udp data
-		return NF_ACCEPT;
+  ip = ip_hdr(skb);
+  if(ip->protocol != 17) //get udp data
+    return NF_ACCEPT;
 
-	udp = (struct udphdr *)(ip+1);
-	if( (udp != NULL) && (ntohs(udp->dest) != 53) ) //DNS req
-	{
-		return NF_ACCEPT;
-	}
+  udp = (struct udphdr *)(ip+1);
+  if( (udp != NULL) && (ntohs(udp->dest) != 53) ) //DNS req
+  {
+    return NF_ACCEPT;
+  }
 
 
-	p = (uint8_t *)udp + 8 + 12 + 1;
-	if(domain_prase(p)>0)
-	{
+  p = (uint8_t *)udp + 8 + 12 + 1;
+  if(domain_prase(p)>0)
+  {
         p_data = (uint16_t *)(udp + 1);
         if(p_data == NULL)
             return NF_ACCEPT;
-    	p_data[1] = htons(0x8580); //FLAGS
-    	p_data[3] = htons(1); //AuswerRRs
+      p_data[1] = htons(0x8580); //FLAGS
+      p_data[3] = htons(1); //AuswerRRs
         memset(&save_name,0,sizeof(save_name));
         memcpy(save_name.name,(char *)udp + sizeof(*udp),ntohs(udp->len)-sizeof(*udp));
         save_name.len = ntohs(udp->len)-sizeof(*udp);
@@ -204,35 +214,35 @@ unsigned int domain_hook(const struct nf_hook_ops *ops,
 
         return NF_DROP;
 
-	}
+  }
 
 
-	return NF_ACCEPT;
+  return NF_ACCEPT;
 }
 
 struct nf_hook_ops flow_ops = {
-	.list =  {NULL,NULL},
-	.hook = domain_hook,
-	.pf = NFPROTO_BRIDGE,
-	.hooknum = NF_BR_PRE_ROUTING,
-	.priority = NF_BR_PRI_FIRST+1
+  .list =  {NULL,NULL},
+  .hook = domain_hook,
+  .pf = NFPROTO_BRIDGE,
+  .hooknum = NF_BR_PRE_ROUTING,
+  .priority = NF_BR_PRI_FIRST+1
 };
 
 static int __init m_init(void)
 {
-	init_dm_ip_moudle();
-	nf_register_hook(&flow_ops);
+  init_dm_ip_moudle();
+  nf_register_hook(&flow_ops);
 
-	printk(" init ok\n");
+  printk(" init ok\n");
 
-	return 0;
+  return 0;
 }
 
 static void __exit m_exit(void)
 {
-	nf_unregister_hook(&flow_ops);
-	exit_dm_ip_moudle();
-	printk("exit domain_hijack\n");
+  nf_unregister_hook(&flow_ops);
+  exit_dm_ip_moudle();
+  printk("exit domain_hijack\n");
 }
 
 module_init(m_init);
