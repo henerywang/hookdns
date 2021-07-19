@@ -40,15 +40,23 @@ static struct proc_dir_entry *proc_entry;
 static struct proc_dir_entry *flow_root;
 
 uint8_t localIP[4]={0x0a, 0x0a, 0x0a, 0xfe}; //IP
+uint16_t localIPV6[8]={0x3001, 0x0000,
+0x0000, 0x0000, 0x0000, 0x0000,
+0x0000, 0x0001}; //IP
+
+
 uint8_t localdm[64]="mydomain.com"; //domain
 uint8_t alldns = 0;
 
 static int dm_ip_read(struct seq_file *s, void *v)
 {
   seq_printf(s, "%s %d.%d.%d.%d\n", localdm, localIP[0], localIP[1], localIP[2], localIP[3]);
-    seq_printf(s, "hook all dns %u\n",alldns);
+  seq_printf(s, "%s %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", localdm, localIPV6[0], localIPV6[1], localIPV6[2], localIPV6[3],
+            localIPV6[4],localIPV6[5],localIPV6[6],localIPV6[7]);
+  seq_printf(s, "hook all dns %u\n",alldns);
   return 0;
 }
+
 
 void str__(int8_t *p)
 {
@@ -102,6 +110,20 @@ ssize_t dm_ip_write(struct file *file, const char __user *buffer, size_t count, 
       localIP[1] = b & 0x00ff;
       localIP[2] = c & 0x00ff;
       localIP[3] = d & 0x00ff;
+    }
+
+  }
+
+  if(strncmp(tmpbuf1, "ipv6", strlen("ipv6")) == 0)
+  {
+    //ipv6
+    uint16_t tmpIpv6[8] = {0};
+    str__(tmpbuf2);
+    err = sscanf(tmpbuf2, "%x:%x:%x:%x:%x:%x:%x:%x", &tmpIpv6[0], &tmpIpv6[1], &tmpIpv6[2], &tmpIpv6[3],
+        &tmpIpv6[4],&tmpIpv6[5],&tmpIpv6[6],&tmpIpv6[7]);
+    if(err>0)
+    {
+        memcpy(localIPV6,tmpIpv6,sizeof(tmpIpv6));
     }
 
   }
